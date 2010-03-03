@@ -77,6 +77,24 @@ object JsonSpec extends Specification {
       "integer numbers" in {
         Json.parse("[42]") mustEqual List(42)
       }
+
+      "very high integer (int) numbers" in {
+        Json.parse("[2147483647]") mustEqual List(2147483647)
+        Json.parse("[" + Integer.MAX_VALUE + "]") mustEqual List(Integer.MAX_VALUE)
+        Json.parse("[" + Integer.MAX_VALUE + "]") mustEqual List(Math.pow(2, 31) - 1)
+      }
+
+      "very high integer (long) numbers" in {
+        // sanity check
+        9223372036854775807L mustEqual java.lang.Long.MAX_VALUE
+        Json.parse("[" + java.lang.Long.MAX_VALUE + "]") mustEqual List(java.lang.Long.MAX_VALUE)
+        Json.parse("[" + java.lang.Long.MAX_VALUE + "]") mustEqual List(Math.pow(2, 63) - 1)
+      }
+
+      "very low integer (int) numbers" in {
+        Json.parse("[-2147483648]") mustEqual List(-2147483648)
+        Json.parse("[" + Integer.MIN_VALUE + "]") mustEqual List(Integer.MIN_VALUE)
+      }
     }
 
     "parse maps" in {
