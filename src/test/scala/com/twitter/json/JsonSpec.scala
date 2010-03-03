@@ -63,6 +63,7 @@ object JsonSpec extends Specification {
     
     "parse numbers" in {
       "floating point numbers" in {
+        Json.parse("[0.0]") mustEqual List(0f)
         Json.parse("[1.42]") mustEqual List(BigDecimal("1.42"))
       }
       
@@ -75,6 +76,7 @@ object JsonSpec extends Specification {
       }
       
       "integer numbers" in {
+        Json.parse("[0]") mustEqual List(0)
         Json.parse("[42]") mustEqual List(42)
       }
 
