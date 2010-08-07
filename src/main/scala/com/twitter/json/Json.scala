@@ -16,7 +16,6 @@
 
 package com.twitter.json
 
-import net.lag.extensions._
 import scala.collection.Map
 import scala.collection.immutable.EmptyMap
 import scala.util.parsing.combinator._
@@ -52,9 +51,28 @@ private class JsonParser extends JavaTokenParsers {
     }
   }
 
+  def unicode: Parser[String] = rep1("\\u" ~> """[a-fA-F0-9]{4}""".r) ^^ { stringBytes =>
+    new String(stringBytes.map(Integer.valueOf(_, 16).intValue.asInstanceOf[Char]).toArray)
+  }
+
+  def escaped: Parser[String] = "\\" ~> """[\\/bfnrt"]""".r ^^ { charStr =>
+    val char = charStr match {
+      case "r" => '\r'
+      case "n" => '\n'
+      case "t" => '\t'
+      case "b" => '\b'
+      case "f" => '\f'
+      case x => x.charAt(0)
+    }
+    char.toString
+  }
+
+  def characters: Parser[String] = """[^\"[\x00-\x1F]\\]+""".r
+
   def string: Parser[String] =
-    "\"" ~> """([^\"[\x00-\x1F]\\]+|\\[\\/bfnrt"]|\\u[a-fA-F0-9]{4})*""".r <~ "\"" ^^
-      { _.replace("""\/""", "/").unquoteC }
+    "\"" ~> rep(unicode | escaped | characters) <~ "\"" ^^ { list =>
+      list.mkString("")
+    }
 
   def value: Parser[Any] = obj | arr | string | number |
     "null" ^^ (x => null) | "true" ^^ (x => true) | "false" ^^ (x => false)
@@ -77,21 +95,32 @@ private class JsonParser extends JavaTokenParsers {
  * recursive Seq or Map. You are in flavor country.
  */
 object Json {
+  private[json] def quotedChar(codePoint: Int) = {
+    codePoint match {
+      case c if c > 0xffff =>
+        val chars = Character.toChars(c)
+        "\\u%04x\\u%04x".format(chars(0).toInt, chars(1).toInt)
+      case c if c > 0x7e => "\\u%04x".format(c.toInt)
+      case c => c.toChar
+    }
+  }
+
   /**
    * Quote a string according to "JSON rules".
    */
   def quote(s: String) = {
-    "\"" + s.regexSub("""[\u0000-\u001f\u0080-\u00a0\u2000-\u2100/\"\\]""".r) { m =>
-      m.matched.charAt(0) match {
-        case '\r' => "\\r"
-        case '\n' => "\\n"
-        case '\t' => "\\t"
-        case '"' => "\\\""
-        case '\\' => "\\\\"
-        case '/' => "\\/"     // to avoid sending "</"
-        case c => "\\u%04x" format c.asInstanceOf[Int]
+    val charCount = s.codePointCount(0, s.length)
+    "\"" + 0.to(charCount - 1).map { idx =>
+      s.codePointAt(idx) match {
+        case 0x0d => "\\r"
+        case 0x0a => "\\n"
+        case 0x09 => "\\t"
+        case 0x22 => "\\\""
+        case 0x5c => "\\\\"
+        case 0x2f => "\\/"     // to avoid sending "</"
+        case c => quotedChar(c)
       }
-    } + "\""
+    }.mkString("") + "\""
   }
 
   /**
