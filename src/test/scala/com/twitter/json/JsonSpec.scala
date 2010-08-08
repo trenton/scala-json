@@ -329,5 +329,10 @@ object JsonSpec extends Specification {
       }
       Json.build(List(obj, 23)).toString mustEqual "[\"abracadabra\",23]"
     }
+
+    "doesn't have org.json OOM bug " in {
+      val malformed = "[\"B00021M1L8\",\"B001NGD59I\",\"B001NGBHE8\",\"B001NGF5DW\",\"B00004YUR2\",\"B000077CPK\",\"B003DPO52S\",\"B00006JBL3\",\"B000UPKWJY\",\"B0028XR1Z4\",\"B000077CPJ\",\"B001NGF640\",\"B001TTM1IK\",\"B001TTLMEY\",\"B001EW5GUM\",\"B001TTDYKY\",\"B001NGD4XA\","
+      Json.parse(malformed) must throwA[JsonException]
+    }
   }
 }
