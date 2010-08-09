@@ -16,8 +16,8 @@
 
 package com.twitter.json
 
-import scala.collection.Map
-import scala.collection.immutable.EmptyMap
+import extensions._
+import scala.collection.immutable.Map
 import scala.util.parsing.combinator._
 
 
@@ -35,7 +35,7 @@ class JsonException(reason: String) extends Exception(reason)
  * Stolen (awesomely) from the scala book and fixed by making string quotation explicit.
  */
 private class JsonParser extends JavaTokenParsers {
-  def obj: Parser[Map[String, Any]] = "{" ~> repsep(member, ",") <~ "}" ^^ (new EmptyMap ++ _)
+  def obj: Parser[Map[String, Any]] = "{" ~> repsep(member, ",") <~ "}" ^^ (Map.empty ++ _)
 
   def arr: Parser[List[Any]] = "[" ~> repsep(value, ",") <~ "]"
 
@@ -47,7 +47,7 @@ private class JsonParser extends JavaTokenParsers {
     case num if num.matches(".*[.eE].*") => BigDecimal(num)
     case num => {
       val rv = num.toLong
-      if (rv >= Math.MIN_INT && rv <= Math.MAX_INT) rv.toInt else rv
+      if (rv >= Int.MinValue && rv <= Int.MaxValue) rv.toInt else rv
     }
   }
 
@@ -91,8 +91,8 @@ private class JsonParser extends JavaTokenParsers {
  * An explanation of Scala types and their JSON representations.
  *
  * Natively supported scalar types are: Boolean, Int, Long, String.
- * Collections are Seq[T], Map[String, T] where T includes the scalars defined above, or
- * recursive Seq or Map. You are in flavor country.
+ * Collections are Sequence[T], Map[String, T] where T includes the scalars defined above, or
+ * recursive Sequence or Map. You are in flavor country.
  */
 object Json {
   private[json] def quotedChar(codePoint: Int) = {
@@ -132,7 +132,8 @@ object Json {
       case null => "null"
       case x: Boolean => x.toString
       case x: Number => x.toString
-      case list: Seq[_] =>
+      case array: Array[_] => array.map(build(_).body).mkString("[", ",", "]")
+      case list: Sequence[_] =>
         list.map(build(_).body).mkString("[", ",", "]")
       case map: Map[_, _] =>
         (for ((key, value) <- map.elements) yield {
