@@ -2,11 +2,20 @@ import sbt._
 import com.twitter.sbt._
 
 
-class ScalaJsonProject(info: ProjectInfo) extends StandardProject(info) {
-  val specs = "org.scala-tools.testing" % "specs_2.8.0" % "1.6.5"
+class ScalaJsonProject(info: ProjectInfo) extends StandardProject(info) with SubversionPublisher {
+  val specs = buildScalaVersion match {
+    case "2.7.7" => "org.scala-tools.testing" %  "specs" % "1.6.2.1" % "test"
+    case _ =>       "org.scala-tools.testing" %% "specs" % "1.6.5"   % "test"
+  }
 
-  Credentials(Path.userHome / ".ivy2" / "credentials", log)
-  val publishTo = "nexus" at "http://nexus.scala-tools.org/content/repositories/releases/"
+  val vscaladoc = "org.scala-tools" % "vscaladoc" % "1.1-md-3"
+
+  override def subversionRepository = Some("http://svn.local.twitter.com/maven-public/")
+
+  override def disableCrossPaths = false
+
+  override def compileOptions = super.compileOptions ++ Seq(Unchecked) ++
+    compileOptions("-encoding", "utf8")
 
   override def pomExtra =
     <licenses>
